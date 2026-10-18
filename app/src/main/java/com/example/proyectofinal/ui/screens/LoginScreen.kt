@@ -9,10 +9,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material3.Icon
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -49,17 +55,29 @@ fun LoginScreen(
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var verClave by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(FondoTripGo)
+            .statusBarsPadding()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp, vertical = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         Spacer(modifier = Modifier.height(24.dp))
+
+        Text(
+            text = "🌎",
+            style = MaterialTheme.typography.displayMedium,
+            modifier = Modifier
+                .background(Color(0xFFE8F0FF), RoundedCornerShape(50))
+                .padding(18.dp)
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
 
         // Identidad de la aplicación
         Text(
@@ -103,6 +121,7 @@ fun LoginScreen(
             placeholder = { Text("ejemplo@correo.com") },
             singleLine = true,
             enabled = !uiState.loading,
+            leadingIcon = { Icon(Icons.Default.Email, contentDescription = null, tint = AzulTripGo) },
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Email
             ),
@@ -118,7 +137,14 @@ fun LoginScreen(
             label = { Text("Contraseña") },
             singleLine = true,
             enabled = !uiState.loading,
-            visualTransformation = PasswordVisualTransformation(),
+            visualTransformation = if (verClave) VisualTransformation.None
+            else PasswordVisualTransformation(),
+            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = AzulTripGo) },
+            trailingIcon = {
+                TextButton(onClick = { verClave = !verClave }) {
+                    Text(if (verClave) "Ocultar" else "Mostrar", color = AzulTripGo)
+                }
+            },
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Password
             ),
@@ -208,8 +234,12 @@ fun StatusMessage(uiState: AuthUiState) {
 
         Text(
             text = uiState.message,
-            color = MaterialTheme.colorScheme.error,
-            style = MaterialTheme.typography.bodyMedium
+            color = RojoTG,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color(0xFFFDECEC), RoundedCornerShape(12.dp))
+                .padding(12.dp)
         )
     }
 }

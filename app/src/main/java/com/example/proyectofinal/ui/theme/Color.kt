@@ -2,10 +2,14 @@ package com.example.proyectofinal.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val Purple80 = Color(0xFFD0BCFF)
-val PurpleGrey80 = Color(0xFFCCC2DC)
-val Pink80 = Color(0xFFEFB8C8)
-
-val Purple40 = Color(0xFF6650a4)
-val PurpleGrey40 = Color(0xFF625b71)
-val Pink40 = Color(0xFF7D5260)
+// Paleta de marca TripGo
+val AzulMarca = Color(0xFF1769FF)
+val AzulOscuro = Color(0xFF0B3FA8)
+val AzulClaro = Color(0xFFE8F0FF)
+val FondoApp = Color(0xFFF5F8FF)
+val TextoPrincipal = Color(0xFF172B4D)
+val TextoSecundario = Color(0xFF64748B)
+val BordeSuave = Color(0xFFD5DEEE)
+val Rojo = Color(0xFFC53030)
+val Verde = Color(0xFF12805C)
+val VerdeClaro = Color(0xFFE3F6EE)

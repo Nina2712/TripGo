@@ -9,10 +9,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material3.Icon
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -46,11 +52,13 @@ fun RegisterScreen(
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var verClave by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(FondoRegistro)
+            .statusBarsPadding()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp, vertical = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -102,6 +110,7 @@ fun RegisterScreen(
             placeholder = { Text("ejemplo@correo.com") },
             singleLine = true,
             enabled = !uiState.loading,
+            leadingIcon = { Icon(Icons.Default.Email, contentDescription = null, tint = AzulRegistro) },
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Email
             ),
@@ -119,7 +128,14 @@ fun RegisterScreen(
             placeholder = { Text("Mínimo 6 caracteres") },
             singleLine = true,
             enabled = !uiState.loading,
-            visualTransformation = PasswordVisualTransformation(),
+            visualTransformation = if (verClave) VisualTransformation.None
+            else PasswordVisualTransformation(),
+            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = AzulRegistro) },
+            trailingIcon = {
+                TextButton(onClick = { verClave = !verClave }) {
+                    Text(if (verClave) "Ocultar" else "Mostrar", color = AzulRegistro)
+                }
+            },
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Password
             ),
@@ -185,8 +201,12 @@ fun RegisterScreen(
 
             Text(
                 text = uiState.message,
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodyMedium
+                color = Color(0xFFC53030),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFFFDECEC), RoundedCornerShape(12.dp))
+                    .padding(12.dp)
             )
         }
 

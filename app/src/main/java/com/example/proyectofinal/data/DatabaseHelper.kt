@@ -13,22 +13,13 @@ import com.example.proyectofinal.ui.model.TipoServicio
  * Tablas: hoteles, autos, tours (catálogos) y reservas.
  */
 class DatabaseHelper(context: Context) :
-    SQLiteOpenHelper(context, "Turismo.db", null, 2) {
+    SQLiteOpenHelper(context, "Turismo.db", null, 3) {
 
     override fun onCreate(db: SQLiteDatabase) {
-        for (tabla in listOf("hoteles", "autos", "tours")) {
-            db.execSQL(
-                "CREATE TABLE $tabla (" +
-                        "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                        "nombre TEXT NOT NULL, " +
-                        "ciudad TEXT NOT NULL, " +
-                        "detalle TEXT NOT NULL DEFAULT '', " +
-                        "precio REAL NOT NULL)"
-            )
-        }
+        crearTablasCatalogo(db)
 
         db.execSQL(
-            "CREATE TABLE reservas (" +
+            "CREATE TABLE IF NOT EXISTS reservas (" +
                     "idReserva INTEGER PRIMARY KEY AUTOINCREMENT, " +
                     "tipo TEXT NOT NULL, " +
                     "servicio TEXT NOT NULL, " +
@@ -42,6 +33,32 @@ class DatabaseHelper(context: Context) :
                     "fechaFin TEXT NOT NULL DEFAULT '')"
         )
 
+        sembrarCatalogos(db)
+    }
+
+    /** Se renuevan solo los catálogos; las reservas del usuario se conservan. */
+    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+        for (tabla in listOf("hoteles", "autos", "tours")) {
+            db.execSQL("DROP TABLE IF EXISTS $tabla")
+        }
+        crearTablasCatalogo(db)
+        sembrarCatalogos(db)
+    }
+
+    private fun crearTablasCatalogo(db: SQLiteDatabase) {
+        for (tabla in listOf("hoteles", "autos", "tours")) {
+            db.execSQL(
+                "CREATE TABLE $tabla (" +
+                        "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                        "nombre TEXT NOT NULL, " +
+                        "ciudad TEXT NOT NULL, " +
+                        "detalle TEXT NOT NULL DEFAULT '', " +
+                        "precio REAL NOT NULL)"
+            )
+        }
+    }
+
+    private fun sembrarCatalogos(db: SQLiteDatabase) {
         sembrar(
             db, "hoteles", listOf(
                 arrayOf<Any>("Palacio del Inka", "Cusco", "Hotel 5 estrellas", 520.0),
@@ -49,7 +66,16 @@ class DatabaseHelper(context: Context) :
                 arrayOf<Any>("Aranwa Paracas Resort", "Ica", "Resort frente al mar", 480.0),
                 arrayOf<Any>("Hotel DM Nazca", "Nazca", "Hotel 3 estrellas", 190.0),
                 arrayOf<Any>("Hotel Hilton Iquitos", "Iquitos", "Hotel 4 estrellas", 410.0),
-                arrayOf<Any>("Hotel Costa del Sol", "Piura", "Hotel de playa", 280.0)
+                arrayOf<Any>("Hotel Costa del Sol", "Piura", "Hotel de playa", 280.0),
+                arrayOf<Any>("Gran Hotel Miraflores", "Lima", "Hotel 5 estrellas", 590.0),
+                arrayOf<Any>("Hotel Plaza Mayor Lima", "Lima", "Hotel 4 estrellas", 340.0),
+                arrayOf<Any>("Hostal Inti Wasi", "Cusco", "Hostal 3 estrellas", 160.0),
+                arrayOf<Any>("Boutique Valle Sagrado", "Cusco", "Hotel 4 estrellas", 390.0),
+                arrayOf<Any>("Hotel Misti Plaza", "Arequipa", "Hotel 3 estrellas", 210.0),
+                arrayOf<Any>("Hotel Oasis Huacachina", "Ica", "Hotel 4 estrellas", 330.0),
+                arrayOf<Any>("Hotel Pampa Dorada", "Nazca", "Hotel 4 estrellas", 250.0),
+                arrayOf<Any>("Amazon Lodge Iquitos", "Iquitos", "Lodge de selva", 360.0),
+                arrayOf<Any>("Hostal Brisa del Mar", "Piura", "Hostal 3 estrellas", 170.0)
             )
         )
 
@@ -60,7 +86,14 @@ class DatabaseHelper(context: Context) :
                 arrayOf<Any>("Kia Rio", "Arequipa", "Modelo 2024", 120.0),
                 arrayOf<Any>("Toyota RAV4", "Lima", "Modelo 2025 · SUV", 250.0),
                 arrayOf<Any>("Toyota Hilux", "Arequipa", "Camioneta 4x4", 280.0),
-                arrayOf<Any>("Nissan Kicks", "Ica", "SUV compacta", 190.0)
+                arrayOf<Any>("Nissan Kicks", "Ica", "SUV compacta", 190.0),
+                arrayOf<Any>("Suzuki Swift", "Lima", "Modelo 2024 · Económico", 110.0),
+                arrayOf<Any>("Toyota Yaris", "Cusco", "Modelo 2024", 130.0),
+                arrayOf<Any>("Mitsubishi L200", "Cusco", "Camioneta 4x4", 300.0),
+                arrayOf<Any>("Hyundai Accent", "Ica", "Sedán 2024", 125.0),
+                arrayOf<Any>("Kia Sportage", "Piura", "Modelo 2025 · SUV", 230.0),
+                arrayOf<Any>("Toyota Hiace", "Lima", "Van 12 pasajeros", 340.0),
+                arrayOf<Any>("Suzuki Jimny", "Nazca", "4x4 compacto", 200.0)
             )
         )
 
@@ -71,16 +104,17 @@ class DatabaseHelper(context: Context) :
                 arrayOf<Any>("Islas Ballestas", "Ica", "4 horas", 90.0),
                 arrayOf<Any>("Sobrevuelo Líneas de Nazca", "Nazca", "1 hora", 260.0),
                 arrayOf<Any>("Amazonía Profunda", "Iquitos", "3 días", 650.0),
-                arrayOf<Any>("Playas de Máncora", "Piura", "Full day", 150.0)
+                arrayOf<Any>("Playas de Máncora", "Piura", "Full day", 150.0),
+                arrayOf<Any>("City Tour Lima Colonial", "Lima", "4 horas", 80.0),
+                arrayOf<Any>("Gastronómico en Barranco", "Lima", "3 horas", 120.0),
+                arrayOf<Any>("Valle Sagrado de los Incas", "Cusco", "Full day", 210.0),
+                arrayOf<Any>("Montaña de Siete Colores", "Cusco", "Full day", 180.0),
+                arrayOf<Any>("Monasterio de Santa Catalina", "Arequipa", "3 horas", 70.0),
+                arrayOf<Any>("Dunas y Sandboard en Huacachina", "Ica", "Medio día", 140.0),
+                arrayOf<Any>("Reserva Pacaya Samiria", "Iquitos", "2 días", 480.0),
+                arrayOf<Any>("Surf y Atardecer en Máncora", "Piura", "3 horas", 130.0)
             )
         )
-    }
-
-    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        for (tabla in listOf("hoteles", "autos", "tours", "reservas")) {
-            db.execSQL("DROP TABLE IF EXISTS $tabla")
-        }
-        onCreate(db)
     }
 
     private fun sembrar(db: SQLiteDatabase, tabla: String, datos: List<Array<Any>>) {

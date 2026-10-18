@@ -37,6 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.proyectofinal.util.AlAgitar
 import com.example.proyectofinal.viewmodel.DestinosViewModel
 import java.util.Locale
 
@@ -61,14 +62,12 @@ fun DestinosScreen(
         modeloVista.cargar()
     }
 
+    // Sensor: al agitar el teléfono se actualiza el clima.
+    AlAgitar { modeloVista.cargar() }
+
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Destinos y clima") },
-                navigationIcon = {
-                    TextButton(onClick = alVolver) { Text("← Volver") }
-                }
-            )
+            BarraTG(titulo = "Destinos y clima", alVolver = alVolver)
         }
     ) { innerPadding ->
         Column(
@@ -79,7 +78,7 @@ fun DestinosScreen(
                 .padding(16.dp)
         ) {
             Text(
-                text = "Consulta el clima actual de cada destino antes de viajar.",
+                text = "Consulta el clima actual de cada destino antes de viajar. Agita el celular para actualizarlo.",
                 color = GrisTG
             )
 

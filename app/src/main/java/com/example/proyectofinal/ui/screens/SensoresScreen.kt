@@ -91,12 +91,7 @@ fun SensoresScreen(alVolver: () -> Unit) {
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Sensores del dispositivo") },
-                navigationIcon = {
-                    TextButton(onClick = alVolver) { Text("← Volver") }
-                }
-            )
+            BarraTG(titulo = "Sensores del dispositivo", alVolver = alVolver)
         }
     ) { innerPadding ->
         Column(
@@ -108,11 +103,7 @@ fun SensoresScreen(alVolver: () -> Unit) {
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Text(
-                text = "Valores en tiempo real de los sensores de tu equipo. " +
-                        "En el emulador algunos sensores pueden no estar disponibles.",
-                color = GrisTG
-            )
+            TarjetaUso()
 
             TarjetaSensor(
                 titulo = "📳 Acelerómetro",
@@ -152,6 +143,48 @@ fun SensoresScreen(alVolver: () -> Unit) {
                         else -> "Sin objetos cerca."
                     }
                 )
+            )
+        }
+    }
+}
+
+@Composable
+private fun TarjetaUso() {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = AzulClaroTG)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text(
+                text = "¿Para qué sirven los sensores?",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = TextoTG
+            )
+            Text(
+                text = "📳 Acelerómetro: detecta movimiento. En «Destinos y clima», " +
+                        "agita el celular para actualizar el clima.",
+                color = TextoTG
+            )
+            Text(
+                text = "💡 Luz: indica si estás en un ambiente oscuro o muy iluminado " +
+                        "para sugerirte el brillo o el modo noche.",
+                color = TextoTG
+            )
+            Text(
+                text = "🖐️ Proximidad: detecta si el teléfono está cerca de tu cara o " +
+                        "tapado, por ejemplo al hablar por llamada.",
+                color = TextoTG
+            )
+            Text(
+                text = "Abajo ves los valores en tiempo real. En el emulador algunos " +
+                        "sensores pueden no estar disponibles.",
+                color = GrisTG,
+                style = MaterialTheme.typography.bodySmall
             )
         }
     }

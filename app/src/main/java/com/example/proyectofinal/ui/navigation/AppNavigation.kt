@@ -18,6 +18,7 @@ import com.example.proyectofinal.ui.screens.DestinosScreen
 import com.example.proyectofinal.ui.screens.HomeScreen
 import com.example.proyectofinal.ui.screens.LoginScreen
 import com.example.proyectofinal.ui.screens.MisReservasScreen
+import com.example.proyectofinal.ui.screens.ProfileScreen
 import com.example.proyectofinal.ui.screens.RegisterScreen
 import com.example.proyectofinal.ui.screens.ReservaFormScreen
 import com.example.proyectofinal.ui.screens.SensoresScreen
@@ -37,6 +38,29 @@ fun AppNavigation(
 
     // Servicio elegido para reservar (vuelo, hotel, auto o tour).
     var servicioSeleccionado by remember { mutableStateOf<Servicio?>(null) }
+
+    // Texto con el que se abre el catálogo de hoteles (desde el buscador o un destino del inicio).
+    var busquedaHoteles by remember { mutableStateOf("") }
+
+    // Navegación de la barra inferior: Inicio, Explorar, Reservas, Perfil.
+    fun irAInicio() {
+        navController.popBackStack(Routes.Home.route, false)
+    }
+
+    fun irATab(ruta: String) {
+        navController.navigate(ruta) {
+            popUpTo(Routes.Home.route) { inclusive = false }
+            launchSingleTop = true
+        }
+    }
+
+    fun cerrarSesion() {
+        authViewModel.logout()
+        navController.navigate(Routes.Login.route) {
+            popUpTo(Routes.Home.route) { inclusive = true }
+            launchSingleTop = true
+        }
+    }
 
     // La navegación depende del estado de autenticación.
     LaunchedEffect(uiState.user) {
@@ -90,22 +114,32 @@ fun AppNavigation(
         composable(Routes.Home.route) {
             HomeScreen(
                 uiState = uiState,
+                dbHelper = dbHelper,
                 onVuelos = { navController.navigate(Routes.Vuelos.route) },
-                onHoteles = { navController.navigate(Routes.Hoteles.route) },
+                onHoteles = {
+                    busquedaHoteles = ""
+                    navController.navigate(Routes.Hoteles.route)
+                },
                 onAutos = { navController.navigate(Routes.Autos.route) },
                 onTours = { navController.navigate(Routes.Tours.route) },
                 onDestinos = { navController.navigate(Routes.Destinos.route) },
-                onReservas = { navController.navigate(Routes.Reservas.route) },
-                onLogout = {
-                    authViewModel.logout()
-
-                    navController.navigate(Routes.Login.route) {
-                        popUpTo(Routes.Home.route) {
-                            inclusive = true
-                        }
-                        launchSingleTop = true
-                    }
+                onReservas = { irATab(Routes.Reservas.route) },
+                onPerfil = { irATab(Routes.Profile.route) },
+                onBuscarHoteles = { texto ->
+                    busquedaHoteles = texto
+                    navController.navigate(Routes.Hoteles.route)
                 }
+            )
+        }
+
+        composable(Routes.Profile.route) {
+            ProfileScreen(
+                uiState = uiState,
+                dbHelper = dbHelper,
+                onInicio = { irAInicio() },
+                onExplorar = { navController.navigate(Routes.Destinos.route) },
+                onReservas = { irATab(Routes.Reservas.route) },
+                onLogout = { cerrarSesion() }
             )
         }
 
@@ -134,6 +168,7 @@ fun AppNavigation(
                 titulo = "Hoteles",
                 subtitulo = "Encuentra tu alojamiento en el Perú.",
                 dbHelper = dbHelper,
+                busquedaInicial = busquedaHoteles,
                 alVolver = { navController.popBackStack() },
                 onReservar = { servicio ->
                     servicioSeleccionado = servicio
@@ -206,7 +241,9 @@ fun AppNavigation(
         composable(Routes.Reservas.route) {
             MisReservasScreen(
                 dbHelper = dbHelper,
-                alVolver = { navController.popBackStack() }
+                onInicio = { irAInicio() },
+                onExplorar = { navController.navigate(Routes.Destinos.route) },
+                onPerfil = { irATab(Routes.Profile.route) }
             )
         }
     }

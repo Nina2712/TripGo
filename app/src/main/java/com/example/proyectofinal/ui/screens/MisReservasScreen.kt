@@ -27,6 +27,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -45,7 +46,9 @@ import com.example.proyectofinal.util.Fechas
 @Composable
 fun MisReservasScreen(
     dbHelper: DatabaseHelper,
-    alVolver: () -> Unit
+    onInicio: () -> Unit,
+    onExplorar: () -> Unit,
+    onPerfil: () -> Unit
 ) {
     val contexto = LocalContext.current
     var busqueda by remember { mutableStateOf("") }
@@ -58,34 +61,35 @@ fun MisReservasScreen(
     }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Mis reservas") },
-                navigationIcon = {
-                    TextButton(onClick = alVolver) { Text("← Volver") }
-                }
+        containerColor = FondoTG,
+        topBar = { BarraTG(titulo = "Mis reservas") },
+        bottomBar = {
+            BarraInferiorTG(
+                actual = "reservas",
+                onInicio = onInicio,
+                onExplorar = onExplorar,
+                onReservas = {},
+                onPerfil = onPerfil
             )
         }
     ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(FondoTG)
                 .padding(innerPadding)
-                .padding(16.dp)
+                .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
-            OutlinedTextField(
-                value = busqueda,
-                onValueChange = { busqueda = it },
-                label = { Text("Buscar por cliente, DNI, servicio o ciudad") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
+            CampoBusquedaTG(
+                valor = busqueda,
+                onCambio = { busqueda = it },
+                placeholder = "Buscar por cliente, DNI, servicio o ciudad"
             )
 
             Spacer(modifier = Modifier.height(10.dp))
 
             Text(
-                text = "${reservas.size} reservas registradas",
+                text = if (reservas.size == 1) "1 reserva registrada"
+                else "${reservas.size} reservas registradas",
                 style = MaterialTheme.typography.bodyMedium,
                 color = GrisTG
             )
@@ -100,16 +104,20 @@ fun MisReservasScreen(
                     TarjetaReserva(
                         reserva = reserva,
                         onEditar = { editando = reserva },
-                        onEliminar = { eliminando = reserva }
+                        onEliminar = { eliminando = reserva },
+                        modifier = Modifier.animateItem()
                     )
                 }
 
                 if (reservas.isEmpty()) {
                     item {
-                        Text(
-                            text = "Aún no tienes reservas. Reserva un vuelo, hotel, auto o tour desde el inicio.",
-                            modifier = Modifier.padding(16.dp),
-                            color = GrisTG
+                        EstadoVacioTG(
+                            emoji = "🎫",
+                            titulo = if (busqueda.isBlank()) "Aún no tienes reservas"
+                            else "Sin resultados",
+                            mensaje = if (busqueda.isBlank())
+                                "Reserva un vuelo, hotel, auto o tour desde el inicio y aparecerá aquí."
+                            else "Prueba con otro nombre, DNI o ciudad."
                         )
                     }
                 }
@@ -161,49 +169,92 @@ fun MisReservasScreen(
 private fun TarjetaReserva(
     reserva: Reserva,
     onEditar: () -> Unit,
-    onEliminar: () -> Unit
+    onEliminar: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val tipo = tipoDe(reserva.tipo)
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
     ) {
-        Column(modifier = Modifier.padding(14.dp)) {
-            Text(
-                text = tipo.emoji + "  " + reserva.servicio,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = TextoTG
-            )
-            Text(text = "Destino: ${reserva.ciudad}", color = GrisTG)
-            Text(text = "Cliente: ${reserva.clienteNombre}", color = TextoTG)
-            Text(text = "DNI: ${reserva.clienteDni}", color = GrisTG)
-            if (reserva.fechaInicio.isNotBlank()) {
+        Column {
+            // Franja de color según el tipo de servicio
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(degradadoDe(tipo))
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(
-                    text = "Del ${reserva.fechaInicio} al ${reserva.fechaFin}",
-                    color = GrisTG
+                    text = tipo.emoji + "  " + tipo.etiqueta,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = Color.White
+                )
+                Text(
+                    text = "✔ Confirmada",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = Color.White,
+                    modifier = Modifier
+                        .background(Color.White.copy(alpha = 0.22f), RoundedCornerShape(50))
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
                 )
             }
-            Text(
-                text = "Cantidad: ${reserva.cantidad} " +
-                        (if (reserva.cantidad == 1) tipo.unidad else tipo.unidades),
-                color = GrisTG
-            )
-            Text(
-                text = "Total: " + formatoPrecio(tipo, reserva.precioTotal),
-                fontWeight = FontWeight.ExtraBold,
-                color = AzulTG
-            )
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
-            ) {
-                TextButton(onClick = onEditar) { Text("Editar") }
-                TextButton(onClick = onEliminar) { Text("Eliminar", color = RojoTG) }
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = reserva.servicio,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = TextoTG
+                )
+                Text(text = "📍 ${reserva.ciudad}", color = GrisTG)
+
+                Spacer(Modifier.height(10.dp))
+
+                Text(text = "Cliente: ${reserva.clienteNombre}", color = TextoTG)
+                Text(text = "DNI: ${reserva.clienteDni}", color = GrisTG)
+                if (reserva.fechaInicio.isNotBlank()) {
+                    Text(
+                        text = "Del ${reserva.fechaInicio} al ${reserva.fechaFin}",
+                        color = GrisTG
+                    )
+                }
+                Text(
+                    text = "Cantidad: ${reserva.cantidad} " +
+                            (if (reserva.cantidad == 1) tipo.unidad else tipo.unidades),
+                    color = GrisTG
+                )
+
+                Spacer(Modifier.height(10.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = "Total",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = GrisTG
+                        )
+                        Text(
+                            text = formatoPrecio(tipo, reserva.precioTotal),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = AzulTG
+                        )
+                    }
+                    Row {
+                        TextButton(onClick = onEditar) { Text("Editar") }
+                        TextButton(onClick = onEliminar) { Text("Eliminar", color = RojoTG) }
+                    }
+                }
             }
         }
     }

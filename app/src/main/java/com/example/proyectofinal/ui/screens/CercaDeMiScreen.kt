@@ -92,12 +92,7 @@ fun CercaDeMiScreen(alVolver: () -> Unit) {
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Cerca de mí") },
-                navigationIcon = {
-                    TextButton(onClick = alVolver) { Text("← Volver") }
-                }
-            )
+            BarraTG(titulo = "Cerca de mí", alVolver = alVolver)
         }
     ) { innerPadding ->
         Column(

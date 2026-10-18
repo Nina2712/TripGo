@@ -4,47 +4,67 @@ import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.proyectofinal.data.DatabaseHelper
+import com.example.proyectofinal.data.Sincronizador
 import com.example.proyectofinal.network.RedApi
 import com.example.proyectofinal.ui.model.Servicio
 import com.example.proyectofinal.ui.model.TipoServicio
+import com.example.proyectofinal.ui.theme.BordeSuave
 import com.example.proyectofinal.util.Fechas
-import com.example.proyectofinal.data.Sincronizador
 import com.example.proyectofinal.util.NotificacionHelper
 import com.example.proyectofinal.util.RecordatorioReservaJob
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 
 /**
  * Formulario de reserva para cualquier servicio (vuelo, hotel, auto o tour).
  * - Valida nombre, DNI (8 dígitos) y cantidad.
- * - En autos se piden fechas de inicio y fin (AAAA-MM-DD) y se evitan cruces.
+ * - En autos se eligen fechas de inicio y fin con calendario y se evitan cruces.
  * - Consume el servicio REST de tipo de cambio para mostrar el total en otra moneda.
  * - Guarda la reserva en SQLite, emite un sonido y muestra una notificación.
  */
@@ -63,10 +83,11 @@ fun ReservaFormScreen(
 
     var nombre by remember { mutableStateOf(nombreInicial) }
     var dni by remember { mutableStateOf("") }
-    var cantidadTexto by remember { mutableStateOf("1") }
+    var cantidadElegida by remember { mutableStateOf(1) }
     var fechaInicio by remember { mutableStateOf("") }
     var fechaFin by remember { mutableStateOf("") }
     var mensaje by remember { mutableStateOf("") }
+    var calendario by remember { mutableStateOf<String?>(null) } // "inicio" | "fin" | null
 
     // Servicio REST: tipo de cambio USD -> PEN (se consulta en segundo plano).
     var tasaPen by remember { mutableStateOf<Double?>(null) }
@@ -79,68 +100,95 @@ fun ReservaFormScreen(
     }
 
     val errorFechas: String? =
-        if (esAuto) Fechas.validarRango(fechaInicio, fechaFin) else null
+        if (esAuto && fechaInicio.isNotBlank() && fechaFin.isNotBlank())
+            Fechas.validarRango(fechaInicio, fechaFin) else null
 
     val cantidad: Int = when {
-        esAuto && errorFechas == null -> Fechas.dias(fechaInicio, fechaFin)
+        esAuto && fechaInicio.isNotBlank() && fechaFin.isNotBlank() && errorFechas == null ->
+            Fechas.dias(fechaInicio, fechaFin)
         esAuto -> 0
-        else -> cantidadTexto.toIntOrNull() ?: 0
+        else -> cantidadElegida
     }
     val total = servicio.precio * cantidad
 
     // Equivalencia en la otra moneda con el tipo de cambio obtenido.
     val equivalencia: String? = tasaPen?.let { tasa ->
         if (tipo == TipoServicio.VUELO) {
-            "≈ S/ " + String.format(java.util.Locale.US, "%.2f", total * tasa)
+            "≈ S/ " + String.format(Locale.US, "%.2f", total * tasa)
         } else {
-            "≈ US$ " + String.format(java.util.Locale.US, "%.2f", total / tasa)
+            "≈ US$ " + String.format(Locale.US, "%.2f", total / tasa)
         }
     }
 
+    val colorCampos = OutlinedTextFieldDefaults.colors(
+        focusedContainerColor = Color.White,
+        unfocusedContainerColor = Color.White,
+        focusedBorderColor = AzulTG,
+        unfocusedBorderColor = BordeSuave
+    )
+
     Scaffold(
-        topBar = {
-            TopAppBar(title = { Text("Reservar ${tipo.etiqueta.lowercase()}") })
-        }
+        containerColor = FondoTG,
+        topBar = { BarraTG(titulo = "Reservar ${tipo.etiqueta.lowercase()}", alVolver = onVolver) }
     ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(FondoTG)
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
+            // ---------- Resumen del servicio ----------
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White)
+                shape = RoundedCornerShape(22.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = tipo.emoji + "  " + servicio.nombre,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = TextoTG
-                    )
-                    Text(text = "Destino: ${servicio.ciudad}", color = GrisTG)
-                    if (servicio.detalle.isNotBlank()) {
-                        Text(text = servicio.detalle, color = GrisTG)
+                Column {
+                    if (tipo != TipoServicio.VUELO) {
+                        ImagenServicio(servicio = servicio, alto = 150.dp)
                     }
-                    Text(
-                        text = "Precio por ${tipo.unidad}: " +
-                                formatoPrecio(tipo, servicio.precio),
-                        color = AzulTG,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = if (tipo == TipoServicio.VUELO) tipo.emoji + "  " + servicio.nombre
+                            else servicio.nombre,
+                            style = MaterialTheme.typography.titleLarge,
+                            color = TextoTG
+                        )
+                        Text(
+                            text = emojiCiudad(servicio.ciudad) + " " + servicio.ciudad,
+                            color = GrisTG
+                        )
+                        if (servicio.detalle.isNotBlank()) {
+                            Text(text = servicio.detalle, color = GrisTG)
+                        }
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            text = "Precio por ${tipo.unidad}: " +
+                                    formatoPrecio(tipo, servicio.precio),
+                            color = AzulTG,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
             }
+
+            // ---------- Datos del cliente ----------
+            Text(
+                text = "Datos del cliente",
+                style = MaterialTheme.typography.titleMedium,
+                color = TextoTG
+            )
 
             OutlinedTextField(
                 value = nombre,
                 onValueChange = { nombre = it },
                 label = { Text("Nombre completo") },
                 modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                colors = colorCampos,
                 singleLine = true
             )
 
@@ -151,58 +199,112 @@ fun ReservaFormScreen(
                 },
                 label = { Text("DNI (8 dígitos)") },
                 modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                colors = colorCampos,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true
             )
 
-            if (esAuto) {
-                OutlinedTextField(
-                    value = fechaInicio,
-                    onValueChange = { fechaInicio = it },
-                    label = { Text("Fecha de inicio (AAAA-MM-DD)") },
-                    placeholder = { Text("2026-10-20") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-                OutlinedTextField(
-                    value = fechaFin,
-                    onValueChange = { fechaFin = it },
-                    label = { Text("Fecha de fin (AAAA-MM-DD)") },
-                    placeholder = { Text("2026-10-23") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-                if (errorFechas == null) {
-                    Text(text = "Días de alquiler: $cantidad", color = GrisTG)
-                }
-            } else {
-                OutlinedTextField(
-                    value = cantidadTexto,
-                    onValueChange = {
-                        if (it.all(Char::isDigit) && it.length <= 2) cantidadTexto = it
-                    },
-                    label = { Text("Cantidad de ${tipo.unidades}") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-            }
-
+            // ---------- Fechas o cantidad ----------
             Text(
-                text = "Total: " + formatoPrecio(tipo, total),
+                text = if (esAuto) "Fechas de alquiler" else "Cantidad de ${tipo.unidades}",
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
                 color = TextoTG
             )
 
-            if (equivalencia != null && total > 0) {
-                Text(
-                    text = "$equivalencia (tipo de cambio en línea)",
-                    color = GrisTG,
-                    style = MaterialTheme.typography.bodySmall
-                )
+            if (esAuto) {
+                OutlinedButton(
+                    onClick = { calendario = "inicio" },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(54.dp),
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Text(
+                        text = "📅  Inicio: " + fechaInicio.ifBlank { "elegir fecha" },
+                        color = TextoTG
+                    )
+                }
+                OutlinedButton(
+                    onClick = { calendario = "fin" },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(54.dp),
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Text(
+                        text = "📅  Fin: " + fechaFin.ifBlank { "elegir fecha" },
+                        color = TextoTG
+                    )
+                }
+                if (errorFechas != null) {
+                    Text(text = errorFechas, color = RojoTG)
+                } else if (cantidad > 0) {
+                    Text(text = "Días de alquiler: $cantidad", color = GrisTG)
+                }
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedButton(
+                        onClick = { if (cantidadElegida > 1) cantidadElegida-- },
+                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier.size(52.dp),
+                        contentPadding = PaddingValues(0.dp)
+                    ) { Text("−", fontSize = 24.sp) }
+
+                    Text(
+                        text = cantidadElegida.toString(),
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = TextoTG,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 24.dp)
+                    )
+
+                    Button(
+                        onClick = { if (cantidadElegida < 30) cantidadElegida++ },
+                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier.size(52.dp),
+                        contentPadding = PaddingValues(0.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = AzulTG)
+                    ) { Text("+", fontSize = 24.sp) }
+                }
+            }
+
+            // ---------- Total ----------
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = AzulClaroTG)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(text = "Total a pagar", color = GrisTG)
+                    Text(
+                        text = formatoPrecio(tipo, total),
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = AzulTG
+                    )
+                    if (equivalencia != null && total > 0) {
+                        Text(
+                            text = "$equivalencia (tipo de cambio en línea)",
+                            color = GrisTG,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
             }
 
             if (mensaje.isNotBlank()) {
-                Text(text = mensaje, color = RojoTG)
+                Text(
+                    text = mensaje,
+                    color = RojoTG,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFFFDECEC), RoundedCornerShape(12.dp))
+                        .padding(12.dp)
+                )
             }
 
             Button(
@@ -214,8 +316,11 @@ fun ReservaFormScreen(
                         dni.length != 8 ->
                             mensaje = "El DNI debe tener 8 dígitos."
 
+                        esAuto && (fechaInicio.isBlank() || fechaFin.isBlank()) ->
+                            mensaje = "Elige las fechas de inicio y fin del alquiler."
+
                         esAuto && errorFechas != null ->
-                            mensaje = errorFechas ?: ""
+                            mensaje = errorFechas
 
                         esAuto && dbHelper.existeCruceAuto(
                             servicio.nombre, servicio.ciudad,
@@ -263,20 +368,82 @@ fun ReservaFormScreen(
                         }
                     }
                 },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(54.dp),
+                shape = RoundedCornerShape(14.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = AzulTG)
             ) {
-                Text("Confirmar reserva")
+                Text("Confirmar reserva", fontWeight = FontWeight.Bold)
             }
 
-            OutlinedButton(
+            TextButton(
                 onClick = onVolver,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Cancelar")
+                Text("Cancelar", color = GrisTG)
             }
         }
     }
+
+    // ---------- Calendario ----------
+    calendario?.let { cual ->
+        val hoyUtc = remember { hoyEnUtc() }
+        val minimo = if (cual == "fin") {
+            val inicio = fechaInicio.takeIf { it.isNotBlank() }?.let { aMillisUtc(it) }
+            (inicio ?: hoyUtc) + 24L * 60 * 60 * 1000
+        } else {
+            hoyUtc
+        }
+        val estado = rememberDatePickerState(
+            selectableDates = object : SelectableDates {
+                override fun isSelectableDate(utcTimeMillis: Long): Boolean = utcTimeMillis >= minimo
+            }
+        )
+
+        DatePickerDialog(
+            onDismissRequest = { calendario = null },
+            confirmButton = {
+                TextButton(onClick = {
+                    estado.selectedDateMillis?.let { ms ->
+                        val texto = deMillisUtc(ms)
+                        if (cual == "inicio") {
+                            fechaInicio = texto
+                            // Si el fin quedó antes del nuevo inicio, se vuelve a pedir.
+                            if (fechaFin.isNotBlank() && fechaFin <= texto) fechaFin = ""
+                        } else {
+                            fechaFin = texto
+                        }
+                    }
+                    calendario = null
+                }) { Text("Aceptar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { calendario = null }) { Text("Cancelar") }
+            }
+        ) {
+            DatePicker(state = estado)
+        }
+    }
 }
+
+private fun formatoUtc(): SimpleDateFormat {
+    val f = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+    f.timeZone = TimeZone.getTimeZone("UTC")
+    return f
+}
+
+/** Medianoche UTC del día de hoy (según la fecha local), como usa el DatePicker. */
+private fun hoyEnUtc(): Long {
+    val hoyLocal = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+    return aMillisUtc(hoyLocal) ?: 0L
+}
+
+private fun aMillisUtc(texto: String): Long? =
+    try {
+        formatoUtc().parse(texto)?.time
+    } catch (e: Exception) {
+        null
+    }
+
+private fun deMillisUtc(ms: Long): String = formatoUtc().format(Date(ms))
