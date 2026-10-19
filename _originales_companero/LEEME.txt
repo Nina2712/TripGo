@@ -1,0 +1,5 @@
+Archivos originales de tu compañero (alquiler de autos con Firestore y pantalla de tours).
+No se compilan (estan fuera de app/src). Su logica de fechas AAAA-MM-DD, validacion de rango y
+control de cruces se integro en el flujo unico de reservas con SQLite
+(util/Fechas.kt, ReservaFormScreen.kt y DatabaseHelper.existeCruceAuto).
+Sus 4 autos de prueba (Corolla, Tucson, Kia Rio, RAV4) estan en el catalogo de autos.
